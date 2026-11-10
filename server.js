@@ -1,6 +1,8 @@
 require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const cors = require("cors");
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
@@ -10,7 +12,32 @@ const app = express();
 // MongoDB ga ulanish
 connectDB();
 
-// Middlewares
+// ─── Helmet (HTTP xavfsizlik headerlari) ─────────────────────────────────────
+app.use(helmet());
+
+// ─── CORS sozlamalari ─────────────────────────────────────────────────────────
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+  : ["http://localhost:3000", "http://localhost:5173"];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Server-to-server yoki Postman (origin yo'q) ga ruxsat
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: ${origin} ga ruxsat yo'q`));
+      }
+    },
+    credentials: true,          // Cookie yuborish uchun (refresh token)
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Authorization"],
+  })
+);
+
+// ─── Body & Cookie ────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
